@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Grade Ledger — SGPA & CGPA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=JetBrains+Mono:wght@400;500;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f4efe6;
+    --paper-deep: #ebe3d3;
+    --ink: #1a1814;
+    --ink-soft: #4a4439;
+    --rule: #2a2620;
+    --accent: #b8331f;
+    --accent-deep: #8a2615;
+    --gold: #a17c2f;
+    --shadow: rgba(26, 24, 20, 0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Fraunces', serif;
+    font-feature-settings: "ss01", "ss02", "onum";
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(rgba(26,24,20,0.04) 1px, transparent 1px),
+      radial-gradient(rgba(26,24,20,0.025) 1px, transparent 1px);
+    background-size: 3px 3px, 7px 7px;
+    background-position: 0 0, 1px 1px;
+    opacity: 0.7;
+  }
+
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 56px 48px 96px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Masthead */
+  .masthead {
+    border-top: 4px double var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 18px 0 14px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .masthead .center { letter-spacing: 0.2em; }
+
+  .title-block {
+    border-bottom: 1px solid var(--rule);
+    padding: 36px 0 40px;
+    text-align: center;
+    position: relative;
+  }
+  .title-block .kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: clamp(58px, 9vw, 124px);
+    line-height: 0.92;
+    letter-spacing: -0.035em;
+    font-variation-settings: "opsz" 144, "SOFT" 30;
+  }
+  h1 em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+    font-size: 1.05em;
+  }
+  .subtitle {
+    margin-top: 20px;
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--ink-soft);
+  }
+
+  /* Tab Switcher */
+  .mode-switch {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin: 44px 0 36px;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .mode-btn {
+    flex: 1;
+    max-width: 340px;
+    padding: 22px 24px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--rule);
+    cursor: pointer;
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 19px;
+    color: var(--ink-soft);
+    text-align: left;
+    transition: background 0.25s ease, color 0.25s ease;
+    position: relative;
+  }
+  .mode-btn:last-child { border-right: none; }
+  .mode-btn .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    display: block;
+    margin-bottom: 6px;
+    color: var(--accent);
+  }
+  .mode-btn:hover { background: rgba(184, 51, 31, 0.04); color: var(--ink); }
+  .mode-btn.active {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .mode-btn.active .num { color: var(--paper-deep); }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: 56px;
+    align-items: start;
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 18px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .section-label .badge { color: var(--accent); }
+
+  /* Prior CGPA Card */
+  .prior-card {
+    background: var(--paper-deep);
+    border: 1px solid var(--rule);
+    padding: 26px 28px;
+    margin-bottom: 32px;
+    display: none;
+  }
+  .prior-card.show { display: block; }
+  .prior-card-title {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+  .prior-card-desc {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin-bottom: 20px;
+    font-style: italic;
+  }
+  .prior-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+  }
+  .field label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .field input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--rule);
+    padding: 8px 0;
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .prior-card .field input { background: var(--paper); padding: 10px 12px; border: 1px solid var(--rule); }
+  .field input:focus { border-color: var(--accent); }
+  .field input::placeholder { color: rgba(74,68,57,0.4); }
+
+  /* Courses Table */
+  .courses-section {
+    margin-bottom: 28px;
+  }
+  .course-row {
+    display: grid;
+    grid-template-columns: 32px 1fr 130px 130px 40px;
+    gap: 18px;
+    align-items: end;
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(42,38,32,0.15);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .course-row.removing { opacity: 0; transform: translateX(-12px); }
+  .course-row .idx {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    padding-bottom: 12px;
+    letter-spacing: 0.1em;
+  }
+  .delete-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    transition: all 0.2s;
+    line-height: 1;
+  }
+  .delete-btn:hover {
+    background: var(--accent);
+    color: var(--paper);
+    border-color: var(--accent);
+  }
+
+  .add-btn {
+    margin-top: 18px;
+    background: transparent;
+    border: 1px dashed var(--rule);
+    padding: 16px 22px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink);
+    width: 100%;
+    transition: all 0.25s;
+  }
+  .add-btn:hover {
+    background: var(--ink);
+    color: var(--paper);
+    border-style: solid;
+    border-color: var(--ink);
+  }
+
+  /* Result Panel */
+  .result-panel {
+    position: sticky;
+    top: 32px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 40px 36px 44px;
+    border: 1px solid var(--rule);
+    box-shadow: 14px 14px 0 var(--paper-deep), 14px 14px 0 1px var(--rule);
+  }
+  .result-panel::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border: 1px solid rgba(244,239,230,0.15);
+    pointer-events: none;
+  }
+  .result-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: rgba(244,239,230,0.55);
+    margin-bottom: 8px;
+  }
+  .result-title {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 28px;
+    margin-bottom: 24px;
+    color: var(--paper);
+  }
+  .result-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 108px;
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+    color: var(--paper);
+    font-variation-settings: "opsz" 144;
+    transition: color 0.3s;
+  }
+  .result-value.empty { color: rgba(244,239,230,0.25); }
+  .result-suffix {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    color: rgba(244,239,230,0.5);
+    margin-top: 12px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(244,239,230,0.18);
+  }
+  .result-breakdown {
+    margin-top: 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(244,239,230,0.7);
+    line-height: 1.8;
+  }
+  .result-breakdown .row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dotted rgba(244,239,230,0.2);
+    padding: 4px 0;
+  }
+  .result-breakdown .row span:last-child { color: var(--paper); }
+  .result-classification {
+    margin-top: 22px;
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 18px;
+    color: var(--gold);
+    text-align: right;
+  }
+
+  /* Footer scale info */
+  .scale-reference {
+    margin-top: 60px;
+    padding-top: 28px;
+    border-top: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+  }
+  .scale-reference h3 {
+    grid-column: 1 / -1;
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+  .scale-item {
+    padding: 10px 0;
+    border-top: 1px solid rgba(42,38,32,0.2);
+  }
+  .scale-item .grade {
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 400;
+  }
+  .scale-item .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  .colophon {
+    margin-top: 50px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-top: 18px;
+    border-top: 4px double var(--rule);
+  }
+  .colophon em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--accent);
+    font-size: 14px;
+  }
+
+  /* Hide number input spinners */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type=number] { -moz-appearance: textfield; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .course-row { animation: fadeUp 0.35s ease both; }
+
+  @keyframes counter {
+    from { opacity: 0.4; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .result-value.pulse { animation: counter 0.35s ease; }
+
+  /* Responsive */
+  @media (max-width: 880px) {
+    .container { padding: 32px 22px 64px; }
+    .layout { grid-template-columns: 1fr; gap: 36px; }
+    .result-panel { position: static; box-shadow: 8px 8px 0 var(--paper-deep), 8px 8px 0 1px var(--rule); }
+    .course-row { grid-template-columns: 24px 1fr 90px 40px; gap: 12px; }
+    .course-row .credit-field { grid-column: 2; }
+    .course-row .grade-field { grid-column: 3; }
+    .prior-grid { grid-template-columns: 1fr; }
+    .mode-btn { padding: 16px 14px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Masthead -->
+  <div class="masthead">
+    <span>Vol. X — No. 1</span>
+    <span class="center">The Grade Ledger</span>
+    <span>Est. MMXXVI</span>
+  </div>
+
+  <div class="title-block">
+    <div class="kicker">Academic Standing · Computed Honestly</div>
+    <h1>Grade <em>Point</em><br>Average</h1>
+    <div class="subtitle">a calculator for the studious and the merely curious</div>
+  </div>
+
+  <!-- Mode Switcher -->
+  <div class="mode-switch" role="tablist">
+    <button class="mode-btn active" data-mode="sgpa" role="tab">
+      <span class="num">01 — Mode</span>
+      Single Semester <em style="font-family:'Instrument Serif',serif;font-style:italic;color:var(--accent)">(SGPA)</em>
+    </button>
+    <button class="mode-btn" data-mode="cgpa" role="tab">
+      <span class="num">02 — Mode</span>
+      Cumulative with Prior <em style="font-family:'Instrument Serif',serif;font-style:italic;color:var(--accent)">(CGPA)</em>
+    </button>
+  </div>
+
+  <!-- Layout -->
+  <div class="layout">
+    <div>
+      <!-- Prior data card (shown in CGPA mode) -->
+      <div class="prior-card" id="priorCard">
+        <div class="prior-card-title">Previous standing</div>
+        <div class="prior-card-desc">your cumulative record before this semester</div>
+        <div class="prior-grid">
+          <div class="field">
+            <label>Prior CGPA</label>
+            <input type="number" step="0.01" min="0" max="10" id="priorCgpa" placeholder="e.g. 8.42">
+          </div>
+          <div class="field">
+            <label>Credits Completed</label>
+            <input type="number" step="0.5" min="0" id="priorCredits" placeholder="e.g. 96">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">
+        <span id="coursesLabel">Current Semester · Courses</span>
+        <span class="badge" id="courseCount">00</span>
+      </div>
+
+      <div id="courses" class="courses-section"></div>
+
+      <button class="add-btn" id="addBtn">+ Add Another Course</button>
+    </div>
+
+    <!-- Result -->
+    <aside class="result-panel">
+      <div class="result-eyebrow">Computed Result</div>
+      <div class="result-title" id="resultTitle">Semester GPA</div>
+      <div class="result-value empty" id="resultValue">—</div>
+      <div class="result-suffix" id="resultSuffix">awaiting input · out of 10.00</div>
+      <div class="result-breakdown" id="breakdown" style="display:none">
+        <div class="row"><span>Total Credits</span><span id="bdCredits">0</span></div>
+        <div class="row"><span>Quality Points</span><span id="bdQuality">0</span></div>
+        <div class="row"><span>Courses Counted</span><span id="bdCount">0</span></div>
+      </div>
+      <div class="result-classification" id="classification"></div>
+    </aside>
+  </div>
+
+  <!-- Scale Reference -->
+  <div class="scale-reference">
+    <h3>Grade Scale — for reference</h3>
+    <div class="scale-item"><div class="grade">10</div><div class="label">O · Outstanding</div></div>
+    <div class="scale-item"><div class="grade">9</div><div class="label">A+ · Excellent</div></div>
+    <div class="scale-item"><div class="grade">8</div><div class="label">A · Very Good</div></div>
+    <div class="scale-item"><div class="grade">7</div><div class="label">B+ · Good</div></div>
+    <div class="scale-item"><div class="grade">6</div><div class="label">B · Above Average</div></div>
+    <div class="scale-item"><div class="grade">5</div><div class="label">C · Average</div></div>
+    <div class="scale-item"><div class="grade">4</div><div class="label">P · Pass</div></div>
+    <div class="scale-item"><div class="grade">0</div><div class="label">F · Fail</div></div>
+  </div>
+
+  <div class="colophon">
+    Weighted average · <em>credits × grade ÷ credits</em> · printed on the day you read this
+  </div>
+</div>
+
+<script>
+  const coursesEl = document.getElementById('courses');
+  const addBtn = document.getElementById('addBtn');
+  const priorCard = document.getElementById('priorCard');
+  const resultValue = document.getElementById('resultValue');
+  const resultTitle = document.getElementById('resultTitle');
+  const resultSuffix = document.getElementById('resultSuffix');
+  const breakdown = document.getElementById('breakdown');
+  const bdCredits = document.getElementById('bdCredits');
+  const bdQuality = document.getElementById('bdQuality');
+  const bdCount = document.getElementById('bdCount');
+  const courseCount = document.getElementById('courseCount');
+  const coursesLabel = document.getElementById('coursesLabel');
+  const classification = document.getElementById('classification');
+  const priorCgpa = document.getElementById('priorCgpa');
+  const priorCredits = document.getElementById('priorCredits');
+  const modeBtns = document.querySelectorAll('.mode-btn');
+
+  let mode = 'sgpa';
+  let counter = 0;
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function addCourse(credits = '', grade = '') {
+    counter++;
+    const id = counter;
+    const row = document.createElement('div');
+    row.className = 'course-row';
+    row.dataset.id = id;
+    row.innerHTML = `
+      <div class="idx">№${pad(coursesEl.children.length + 1)}</div>
+      <div class="field name-field">
+        <label>Course (optional)</label>
+        <input type="text" class="c-name" placeholder="e.g. Linear Algebra">
+      </div>
+      <div class="field credit-field">
+        <label>Credits</label>
+        <input type="number" step="0.5" min="0" class="c-credits" placeholder="3" value="${credits}">
+      </div>
+      <div class="field grade-field">
+        <label>Grade (0–10)</label>
+        <input type="number" step="0.01" min="0" max="10" class="c-grade" placeholder="8.5" value="${grade}">
+      </div>
+      <button class="delete-btn" title="Remove">×</button>
+    `;
+    coursesEl.appendChild(row);
+
+    row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', compute));
+    row.querySelector('.delete-btn').addEventListener('click', () => removeCourse(row));
+    compute();
+  }
+
+  function removeCourse(row) {
+    if (coursesEl.children.length <= 1) {
+      row.querySelectorAll('input').forEach(i => i.value = '');
+      compute();
+      return;
+    }
+    row.classList.add('removing');
+    setTimeout(() => {
+      row.remove();
+      reindex();
+      compute();
+    }, 250);
+  }
+
+  function reindex() {
+    [...coursesEl.children].forEach((row, i) => {
+      row.querySelector('.idx').textContent = `№${pad(i + 1)}`;
+    });
+  }
+
+  function classify(gpa) {
+    if (gpa >= 9) return 'a most distinguished record';
+    if (gpa >= 8) return 'first class with distinction';
+    if (gpa >= 7) return 'first class standing';
+    if (gpa >= 6) return 'second class — upper';
+    if (gpa >= 5) return 'second class — lower';
+    if (gpa > 0) return 'a pass, nothing more';
+    return '';
+  }
+
+  function compute() {
+    let qualityPoints = 0;
+    let totalCredits = 0;
+    let counted = 0;
+
+    [...coursesEl.children].forEach(row => {
+      const c = parseFloat(row.querySelector('.c-credits').value);
+      const g = parseFloat(row.querySelector('.c-grade').value);
+      if (!isNaN(c) && !isNaN(g) && c > 0 && g >= 0 && g <= 10) {
+        qualityPoints += c * g;
+        totalCredits += c;
+        counted++;
+      }
+    });
+
+    courseCount.textContent = pad(coursesEl.children.length);
+
+    if (mode === 'cgpa') {
+      const pCgpa = parseFloat(priorCgpa.value);
+      const pCred = parseFloat(priorCredits.value);
+      if (!isNaN(pCgpa) && !isNaN(pCred) && pCred > 0 && pCgpa >= 0 && pCgpa <= 10) {
+        qualityPoints += pCgpa * pCred;
+        totalCredits += pCred;
+      }
+    }
+
+    if (totalCredits > 0 && counted > 0) {
+      const gpa = qualityPoints / totalCredits;
+      resultValue.textContent = gpa.toFixed(2);
+      resultValue.classList.remove('empty');
+      resultValue.classList.remove('pulse');
+      void resultValue.offsetWidth;
+      resultValue.classList.add('pulse');
+      resultSuffix.textContent = mode === 'cgpa' ? 'cumulative · out of 10.00' : 'this semester · out of 10.00';
+      breakdown.style.display = 'block';
+      bdCredits.textContent = totalCredits.toFixed(1);
+      bdQuality.textContent = qualityPoints.toFixed(2);
+      bdCount.textContent = pad(counted);
+      classification.textContent = classify(gpa);
+    } else {
+      resultValue.textContent = '—';
+      resultValue.classList.add('empty');
+      resultSuffix.textContent = 'awaiting input · out of 10.00';
+      breakdown.style.display = 'none';
+      classification.textContent = '';
+    }
+  }
+
+  modeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      modeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      mode = btn.dataset.mode;
+      if (mode === 'cgpa') {
+        priorCard.classList.add('show');
+        resultTitle.textContent = 'Cumulative GPA';
+        coursesLabel.textContent = 'Current Semester · Courses';
+      } else {
+        priorCard.classList.remove('show');
+        resultTitle.textContent = 'Semester GPA';
+        coursesLabel.textContent = 'This Semester · Courses';
+      }
+      compute();
+    });
+  });
+
+  priorCgpa.addEventListener('input', compute);
+  priorCredits.addEventListener('input', compute);
+  addBtn.addEventListener('click', () => addCourse());
+
+  // seed three rows
+  addCourse();
+  addCourse();
+  addCourse();
+</script>
+</body>
+</html>
